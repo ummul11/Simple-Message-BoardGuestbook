@@ -1,7 +1,10 @@
 <template>
-  <div class="message-item">
+  <div class="message-item" :class="{ 'own-message': isOwnMessage }">
     <div class="message-header">
-      <div class="author">{{ truncatedAuthor }}</div>
+      <div class="author">
+        <BlockchainAddress :address="message.author" />
+        <span v-if="isOwnMessage" class="own-message-badge">You</span>
+      </div>
       <div class="timestamp">{{ formattedDate }}</div>
     </div>
     <div class="message-content">
@@ -12,7 +15,8 @@
         @click="likeMessage" 
         class="like-button"
         :class="{ 'liked': hasLiked }"
-        :disabled="!isAuthenticated || isProcessing"
+        :disabled="!isAuthenticated || isProcessing || hasLiked || isOwnMessage"
+        :title="getLikeButtonTitle"
       >
         <span class="like-icon">❤</span>
         <span class="like-count">{{ message.likes }}</span>
@@ -22,63 +26,71 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex';
+import { mapGetters, mapActions, mapState } from 'vuex';
+import { formatDate } from '@/utils/date';
+import BlockchainAddress from './BlockchainAddress.vue';
 
 export default {
   name: 'MessageItem',
+  components: {
+    BlockchainAddress
+  },
   props: {
     message: {
       type: Object,
       required: true
     }
   },
-  data() {
-    return {
-      isProcessing: false,
-      hasLiked: false // This will be tracked properly in Part 2
-    };
-  },
   computed: {
     ...mapGetters({
       isAuthenticated: 'auth/isAuthenticated',
-      userAddress: 'auth/userAddress'
+      userAddress: 'auth/userAddress',
+      hasUserLiked: 'messages/hasUserLiked'
     }),
-    truncatedAuthor() {
-      const author = this.message.author;
-      return `${author.substring(0, 6)}...${author.substring(author.length - 4)}`;
+    ...mapState({
+      isProcessing: state => state.messages.loading
+    }),
+    getLikeButtonTitle() {
+      if (!this.isAuthenticated) return 'Connect your wallet to like messages';
+      if (this.hasLiked) return 'You already liked this message';
+      if (this.isOwnMessage) return 'You cannot like your own messages';
+      if (this.isProcessing) return 'Processing...';
+      return 'Like this message';
     },
     formattedDate() {
-      const date = new Date(this.message.timestamp);
-      return date.toLocaleString();
+      // Use our date formatting utility
+      return this.formatDate(this.message.timestamp, true); // true indicates it's a block height
+    },
+    hasLiked() {
+      return this.hasUserLiked(this.message.id);
+    },
+    isOwnMessage() {
+      return this.isAuthenticated && this.userAddress === this.message.author;
     }
   },
   methods: {
+    formatDate,
+    ...mapActions({
+      likeMessageAction: 'messages/likeMessageAction'
+    }),
+    
     async likeMessage() {
-      if (!this.isAuthenticated || this.isProcessing) return;
-      
-      this.isProcessing = true;
+      if (!this.isAuthenticated || this.isProcessing || this.hasLiked) return;
       
       try {
-        // This is a placeholder for the actual contract interaction
-        // Will be implemented in Part 2
-        console.log('Liking message:', this.message.id);
+        await this.likeMessageAction(this.message.id);
         
-        // Simulate a delay for now
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Update the like count in the store
-        const newLikeCount = this.message.likes + 1;
-        this.$store.commit('messages/updateMessageLikes', {
-          messageId: this.message.id,
-          likes: newLikeCount
+        // Show success notification
+        this.$emit('show-notification', {
+          type: 'success',
+          message: 'Your like has been submitted to the blockchain.'
         });
-        
-        this.hasLiked = true;
       } catch (error) {
         console.error('Error liking message:', error);
-        alert('Failed to like message. Please try again.');
-      } finally {
-        this.isProcessing = false;
+        this.$emit('show-notification', {
+          type: 'error',
+          message: 'Failed to like message. Please try again.'
+        });
       }
     }
   }
@@ -101,8 +113,22 @@ export default {
 }
 
 .author {
-  font-weight: 500;
-  color: #5546FF;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.own-message-badge {
+  background-color: #5546FF;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+.own-message {
+  border-left-color: #5546FF;
+  background-color: rgba(85, 70, 255, 0.05);
 }
 
 .timestamp {

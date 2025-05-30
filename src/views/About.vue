@@ -9,6 +9,11 @@
           It allows users to leave messages, like other messages, and interact with the 
           blockchain in a simple and intuitive way.
         </p>
+        <p>
+          This application demonstrates how to build decentralized applications (dApps) 
+          that leverage blockchain technology for data persistence and user authentication,
+          while maintaining a familiar and user-friendly interface.
+        </p>
       </section>
       
       <section>
@@ -24,11 +29,29 @@
       <section>
         <h2>Technology Stack</h2>
         <ul>
-          <li><strong>Frontend:</strong> Vue.js</li>
+          <li><strong>Frontend:</strong> Vue.js 3 with Composition API</li>
+          <li><strong>State Management:</strong> Vuex 4</li>
+          <li><strong>Routing:</strong> Vue Router 4</li>
           <li><strong>Blockchain:</strong> Stacks</li>
           <li><strong>Smart Contracts:</strong> Clarity</li>
           <li><strong>Authentication:</strong> Stacks Connect</li>
+          <li><strong>API Calls:</strong> Axios</li>
         </ul>
+      </section>
+      
+      <section>
+        <h2>About Stacks Blockchain</h2>
+        <p>
+          <a href="https://www.stacks.co/" target="_blank" rel="noopener noreferrer">Stacks</a> 
+          is a layer-1 blockchain solution that is connected to Bitcoin. It brings smart contracts 
+          and decentralized apps to Bitcoin. These apps are open and modular, meaning developers 
+          can build on each other's apps, creating endless possibilities.
+        </p>
+        <p>
+          Stacks uses the <a href="https://clarity-lang.org/" target="_blank" rel="noopener noreferrer">Clarity</a> 
+          programming language for smart contracts. Clarity is designed to be secure, predictable, and 
+          directly analyzable to reduce the risk of bugs and exploits.
+        </p>
       </section>
       
       <section>

@@ -11,7 +11,8 @@
     author: principal,
     content: (string-utf8 280),
     timestamp: uint,
-    likes: uint
+    likes: uint,
+    parent-id: (optional uint)
   }
 )
 
@@ -53,7 +54,38 @@
         author: sender,
         content: content,
         timestamp: block-height,
-        likes: u0
+        likes: u0,
+        parent-id: none
+      }
+    )
+    
+    ;; Return the new message ID
+    (ok new-id)
+  )
+)
+
+(define-public (reply-to-message (content (string-utf8 280)) (parent-id uint))
+  (let
+    (
+      (new-id (+ (var-get last-message-id) u1))
+      (sender tx-sender)
+      (parent-message (get-message parent-id))
+    )
+    ;; Check if the parent message exists
+    (asserts! (is-some parent-message) (err u4))
+    
+    ;; Update the last message ID
+    (var-set last-message-id new-id)
+    
+    ;; Store the new message
+    (map-set messages
+      { message-id: new-id }
+      {
+        author: sender,
+        content: content,
+        timestamp: block-height,
+        likes: u0,
+        parent-id: (some parent-id)
       }
     )
     

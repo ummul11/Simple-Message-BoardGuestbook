@@ -1,53 +1,72 @@
-import { AppConfig, UserSession, showConnect } from '@stacks/connect';
-import { StacksTestnet } from '@stacks/network';
-
-const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
+import { 
+  userSession, 
+  connectWallet, 
+  signUserOut, 
+  getUserData 
+} from '@/utils/stacks';
 
 const state = {
   isAuthenticated: false,
   userAddress: null,
-  userData: null
+  userData: null,
+  loading: false
 };
 
 const getters = {
   isAuthenticated: state => state.isAuthenticated,
   userAddress: state => state.userAddress,
-  userData: state => state.userData
+  userData: state => state.userData,
+  loading: state => state.loading
 };
 
 const actions = {
   checkAuth({ commit }) {
-    if (userSession.isUserSignedIn()) {
-      const userData = userSession.loadUserData();
-      commit('setUserData', userData);
-      commit('setUserAddress', userData.profile.stxAddress.testnet);
-      commit('setIsAuthenticated', true);
+    commit('setLoading', true);
+    try {
+      const userData = getUserData();
+      if (userData) {
+        commit('setUserData', userData);
+        commit('setUserAddress', userData.profile.stxAddress.testnet);
+        commit('setIsAuthenticated', true);
+      }
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+    } finally {
+      commit('setLoading', false);
     }
   },
   
   connectWallet({ commit }) {
-    showConnect({
-      appDetails: {
-        name: 'Stacks Guestbook',
-        icon: window.location.origin + '/favicon.ico',
-      },
-      redirectTo: '/',
-      onFinish: () => {
-        const userData = userSession.loadUserData();
-        commit('setUserData', userData);
-        commit('setUserAddress', userData.profile.stxAddress.testnet);
-        commit('setIsAuthenticated', true);
-      },
-      userSession,
+    commit('setLoading', true);
+    
+    connectWallet(() => {
+      try {
+        const userData = getUserData();
+        if (userData) {
+          commit('setUserData', userData);
+          commit('setUserAddress', userData.profile.stxAddress.testnet);
+          commit('setIsAuthenticated', true);
+        }
+      } catch (error) {
+        console.error('Error connecting wallet:', error);
+      } finally {
+        commit('setLoading', false);
+      }
     });
   },
   
   disconnectWallet({ commit }) {
-    userSession.signUserOut();
-    commit('setUserData', null);
-    commit('setUserAddress', null);
-    commit('setIsAuthenticated', false);
+    commit('setLoading', true);
+    try {
+      signUserOut();
+      commit('setUserData', null);
+      commit('setUserAddress', null);
+      commit('setIsAuthenticated', false);
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+    } finally {
+      commit('setLoading', false);
+    }
   }
 };
 
@@ -60,6 +79,9 @@ const mutations = {
   },
   setUserData(state, data) {
     state.userData = data;
+  },
+  setLoading(state, status) {
+    state.loading = status;
   }
 };
 

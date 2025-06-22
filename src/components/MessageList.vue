@@ -1,15 +1,11 @@
 <template>
   <div class="message-list">
-    <div v-if="messages.length === 0" class="no-messages">
-      <p>No messages yet. Be the first to leave a message!</p>
-    </div>
-    <div v-else>
-      <MessageItem 
-        v-for="message in messages" 
-        :key="message.id" 
-        :message="message" 
-      />
-    </div>
+    <MessageItem 
+      v-for="message in messages" 
+      :key="message.id" 
+      :message="message"
+      @show-notification="forwardNotification"
+    />
   </div>
 </template>
 
@@ -25,6 +21,11 @@ export default {
     messages: {
       type: Array,
       required: true
+    }
+  },
+  methods: {
+    forwardNotification(notification) {
+      this.$emit('show-notification', notification);
     }
   }
 };

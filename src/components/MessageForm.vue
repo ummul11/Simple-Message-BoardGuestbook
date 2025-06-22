@@ -28,48 +28,48 @@
 </template>
 
 <script>
+import { mapState, mapActions } from 'vuex';
+
 export default {
   name: 'MessageForm',
   data() {
     return {
       message: '',
-      isSubmitting: false,
       maxLength: 280 // Twitter-like character limit
     };
   },
+  computed: {
+    ...mapState({
+      isSubmitting: state => state.messages.loading,
+      error: state => state.messages.error
+    })
+  },
   methods: {
+    ...mapActions({
+      createMessage: 'messages/createMessage'
+    }),
+    
     async submitMessage() {
       if (!this.message.trim()) return;
       
-      this.isSubmitting = true;
-      
       try {
-        // This is a placeholder for the actual contract interaction
-        // Will be implemented in Part 2
-        console.log('Submitting message:', this.message);
-        
-        // Simulate a delay for now
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Add a mock message to the store
-        const mockMessage = {
-          id: Date.now(),
-          author: this.$store.getters['auth/userAddress'],
-          content: this.message,
-          timestamp: Date.now(),
-          likes: 0
-        };
-        
-        this.$store.commit('messages/addMessage', mockMessage);
+        await this.createMessage(this.message);
         
         // Clear the form
         this.message = '';
         this.$emit('message-posted');
+        
+        // Show success notification
+        this.$emit('show-notification', {
+          type: 'success',
+          message: 'Your message has been submitted to the blockchain and will appear shortly.'
+        });
       } catch (error) {
         console.error('Error posting message:', error);
-        alert('Failed to post message. Please try again.');
-      } finally {
-        this.isSubmitting = false;
+        this.$emit('show-notification', {
+          type: 'error',
+          message: 'Failed to post message. Please try again.'
+        });
       }
     }
   }

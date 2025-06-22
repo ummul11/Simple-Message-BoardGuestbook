@@ -1,6 +1,11 @@
 ;; Guestbook Smart Contract
 ;; This contract allows users to post messages and like other messages
 
+(define-constant ERR_MESSAGE_NOT_FOUND (err u1))
+(define-constant ERR_ALREADY_LIKED (err u2))
+(define-constant ERR_LIKE_FAILED (err u3))
+(define-constant ERR_PARENT_NOT_FOUND (err u4))
+
 ;; Define data variables
 (define-data-var last-message-id uint u0)
 
@@ -72,7 +77,7 @@
       (parent-message (get-message parent-id))
     )
     ;; Check if the parent message exists
-    (asserts! (is-some parent-message) (err u4))
+    (asserts! (is-some parent-message) ERR_PARENT_NOT_FOUND)
     
     ;; Update the last message ID
     (var-set last-message-id new-id)
@@ -103,10 +108,10 @@
     )
     
     ;; Check if the message exists
-    (asserts! (is-some existing-message) (err u1))
+    (asserts! (is-some existing-message) ERR_MESSAGE_NOT_FOUND)
     
     ;; Check if the user has already liked this message
-    (asserts! (not (get liked user-like)) (err u2))
+    (asserts! (not (get liked user-like)) ERR_ALREADY_LIKED)
     
     ;; Update the like count
     (match existing-message
@@ -126,7 +131,7 @@
         
         (ok true)
       )
-      (err u3)
+      ERR_LIKE_FAILED
     )
   )
 )

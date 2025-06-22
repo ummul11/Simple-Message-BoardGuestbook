@@ -213,3 +213,114 @@ export const likeMessage = async (messageId) => {
     throw error;
   }
 };
+
+/**
+ * Send a tip to a message author
+ * @param {string} recipient - Recipient's Stacks address
+ * @param {number} amount - Tip amount in micro-STX
+ * @param {number} messageId - Message ID being tipped
+ * @returns {Promise<Object>} Transaction result
+ */
+export const sendTip = async (recipient, amount, messageId) => {
+  if (!userSession.isUserSignedIn()) {
+    throw new Error('User not authenticated');
+  }
+  
+  const userData = userSession.loadUserData();
+  
+  const txOptions = {
+    contractAddress: CONTRACT_ADDRESS,
+    contractName: 'tipping',
+    functionName: 'send-tip',
+    functionArgs: [
+      standardPrincipalCV(recipient),
+      uintCV(amount),
+      uintCV(messageId)
+    ],
+    senderKey: userData.appPrivateKey,
+    validateWithAbi: true,
+    network: NETWORK,
+    anchorMode: AnchorMode.Any,
+  };
+  
+  try {
+    const transaction = await makeContractCall(txOptions);
+    const broadcastResponse = await broadcastTransaction(transaction, NETWORK);
+    return broadcastResponse;
+  } catch (error) {
+    console.error('Error sending tip:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get tips for a specific message
+ * @param {number} messageId - Message ID
+ * @returns {Promise<Array>} Array of tips
+ */
+export const getMessageTips = async (messageId) => {
+  try {
+    const response = await callReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: 'tipping',
+      functionName: 'get-message-tips',
+      functionArgs: [uintCV(messageId)],
+      network: NETWORK,
+      senderAddress: CONTRACT_ADDRESS,
+    });
+    
+    const tips = cvToValue(response);
+    return tips || [];
+  } catch (error) {
+    console.error('Error fetching message tips:', error);
+    return [];
+  }
+};
+
+/**
+ * Get total tips received by a user
+ * @param {string} userAddress - User's Stacks address
+ * @returns {Promise<number>} Total tips received
+ */
+export const getUserTipsReceived = async (userAddress) => {
+  try {
+    const response = await callReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: 'tipping',
+      functionName: 'get-user-tips-received',
+      functionArgs: [standardPrincipalCV(userAddress)],
+      network: NETWORK,
+      senderAddress: userAddress,
+    });
+    
+    const result = cvToValue(response);
+    return result.totalAmount || 0;
+  } catch (error) {
+    console.error('Error fetching user tips received:', error);
+    return 0;
+  }
+};
+
+/**
+ * Get total tips sent by a user
+ * @param {string} userAddress - User's Stacks address
+ * @returns {Promise<number>} Total tips sent
+ */
+export const getUserTipsSent = async (userAddress) => {
+  try {
+    const response = await callReadOnlyFunction({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: 'tipping',
+      functionName: 'get-user-tips-sent',
+      functionArgs: [standardPrincipalCV(userAddress)],
+      network: NETWORK,
+      senderAddress: userAddress,
+    });
+    
+    const result = cvToValue(response);
+    return result.totalAmount || 0;
+  } catch (error) {
+    console.error('Error fetching user tips sent:', error);
+    return 0;
+  }
+};

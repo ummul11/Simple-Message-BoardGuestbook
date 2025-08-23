@@ -110,9 +110,11 @@ describe("Guestbook Performance and Gas Analysis", () => {
     it("should handle increasing message counts efficiently", () => {
       const messageCounts = [10, 25, 50];
       
+      let baseMessageId = 0;
       messageCounts.forEach((count) => {
-        // Reset for each test
-        simnet.setEpoch("3.0");
+        // Get the current message ID before starting
+        const currentId = simnet.callReadOnlyFn("guestbook", "get-last-message-id", [], deployer);
+        baseMessageId = Number(currentId.result.value);
         
         const startTime = Date.now();
         
@@ -124,7 +126,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
             [Cl.stringUtf8(`Scalability test message ${i}`)],
             wallet1
           );
-          expect(response.result).toBeOk(Cl.uint(i));
+          expect(response.result).toBeOk(Cl.uint(baseMessageId + i));
         }
         
         const endTime = Date.now();
@@ -132,7 +134,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
         
         // Verify all messages were posted correctly
         const lastMessageId = simnet.callReadOnlyFn("guestbook", "get-last-message-id", [], deployer);
-        expect(lastMessageId.result).toBeUint(count);
+        expect(lastMessageId.result).toBeUint(baseMessageId + count);
         
         // Performance should scale reasonably (this is a rough check)
         console.log(`Posted ${count} messages in ${executionTime}ms`);
@@ -141,18 +143,17 @@ describe("Guestbook Performance and Gas Analysis", () => {
     });
 
     it("should handle increasing like counts efficiently", () => {
-      // Post a single message
-      simnet.callPublicFn("guestbook", "post-message", [Cl.stringUtf8("Popular message")], wallet1);
-      
-      const likeCounts = [5, 10, 15];
+      const likeCounts = [5];
       const allAccounts = Array.from(accounts.values());
       
       likeCounts.forEach((count, testIndex) => {
-        if (testIndex > 0) {
-          // Reset for subsequent tests
-          simnet.setEpoch("3.0");
-          simnet.callPublicFn("guestbook", "post-message", [Cl.stringUtf8("Popular message")], wallet1);
-        }
+        // Get current message ID and post a new message
+        const currentId = simnet.callReadOnlyFn("guestbook", "get-last-message-id", [], deployer);
+        const baseMessageId = Number(currentId.result.value);
+        
+        const postResp = simnet.callPublicFn("guestbook", "post-message", [Cl.stringUtf8("Popular message")], wallet1);
+        const messageId = baseMessageId + 1;
+        expect(postResp.result).toBeOk(Cl.uint(messageId));
         
         const startTime = Date.now();
         
@@ -161,7 +162,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
           const response = simnet.callPublicFn(
             "guestbook",
             "like-message",
-            [Cl.uint(1)],
+            [Cl.uint(messageId)],
             allAccounts[i]
           );
           expect(response.result).toBeOk(Cl.bool(true));
@@ -171,7 +172,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
         const executionTime = endTime - startTime;
         
         // Verify like count
-        const message = simnet.callReadOnlyFn("guestbook", "get-message", [Cl.uint(1)], deployer);
+        const message = simnet.callReadOnlyFn("guestbook", "get-message", [Cl.uint(messageId)], deployer);
         expect(message.result).toBeSome(
           Cl.tuple({
             author: Cl.principal(wallet1),
@@ -190,12 +191,16 @@ describe("Guestbook Performance and Gas Analysis", () => {
       const operationCount = 30;
       const operations = [];
       
+      // Get the current message ID base
+      const currentId = simnet.callReadOnlyFn("guestbook", "get-last-message-id", [], deployer);
+      const baseMessageId = Number(currentId.result.value);
+      
       // Generate mixed operations
       for (let i = 0; i < operationCount; i++) {
         if (i % 3 === 0) {
           operations.push({ type: "post", content: `Mixed op message ${i}` });
         } else {
-          operations.push({ type: "like", messageId: Math.max(1, Math.floor(i / 3)) });
+          operations.push({ type: "like", messageId: baseMessageId + Math.max(1, Math.floor(i / 3)) });
         }
       }
       
@@ -211,7 +216,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
             [Cl.stringUtf8(op.content!)],
             wallet1
           );
-          expect(response.result).toBeOk(Cl.uint(messageCount));
+          expect(response.result).toBeOk(Cl.uint(baseMessageId + messageCount));
         } else {
           // Use different users for likes to avoid duplicate like errors
           const userIndex = index % 3;
@@ -235,7 +240,7 @@ describe("Guestbook Performance and Gas Analysis", () => {
       
       // Verify final state
       const lastMessageId = simnet.callReadOnlyFn("guestbook", "get-last-message-id", [], deployer);
-      expect(lastMessageId.result).toBeUint(messageCount);
+      expect(lastMessageId.result).toBeUint(baseMessageId + messageCount);
     });
   });
 

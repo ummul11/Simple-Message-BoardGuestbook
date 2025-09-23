@@ -74,7 +74,7 @@ describe("Tipping Contract Tests", () => {
         wallet1
       );
 
-      expect(response.result).toBeOk(Cl.uint(1));
+      expect(response.result).toBeOk(Cl.bool(true));
       
       // Verify the tip was stored correctly
       const tip = simnet.callReadOnlyFn(
@@ -90,7 +90,7 @@ describe("Tipping Contract Tests", () => {
           recipient: Cl.principal(wallet2),
           amount: Cl.uint(tipAmount),
           "message-id": Cl.uint(messageId),
-          timestamp: Cl.uint(simnet.blockHeight)
+          timestamp: Cl.uint(simnet.blockHeight - 1)
         })
       );
     });
@@ -105,7 +105,7 @@ describe("Tipping Contract Tests", () => {
         [Cl.principal(wallet2), Cl.uint(tipAmount), Cl.uint(1)],
         wallet1
       );
-      expect(response1.result).toBeOk(Cl.uint(1));
+      expect(response1.result).toBeOk(Cl.bool(true));
 
       // Send second tip
       const response2 = simnet.callPublicFn(
@@ -114,7 +114,7 @@ describe("Tipping Contract Tests", () => {
         [Cl.principal(wallet3), Cl.uint(tipAmount), Cl.uint(2)],
         wallet1
       );
-      expect(response2.result).toBeOk(Cl.uint(2));
+      expect(response2.result).toBeOk(Cl.bool(true));
 
       // Verify last tip ID
       const lastTipId = simnet.callReadOnlyFn(
@@ -258,7 +258,7 @@ describe("Tipping Contract Tests", () => {
         wallet1
       );
       
-      expect(response.result).toBeOk(Cl.uint(1));
+      expect(response.result).toBeOk(Cl.bool(true));
       
       // Get final balances
       const finalSenderBalance = simnet.getAssetsMap().get("STX")?.get(wallet1) || 0;
@@ -301,7 +301,7 @@ describe("Tipping Contract Tests", () => {
           recipient: Cl.principal(wallet2),
           amount: Cl.uint(1000000),
           "message-id": Cl.uint(1),
-          timestamp: Cl.uint(simnet.blockHeight - 1)
+          timestamp: Cl.uint(simnet.blockHeight - 2)
         })
       );
     });

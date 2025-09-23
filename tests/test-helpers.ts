@@ -322,10 +322,226 @@ export class TestDataGenerator {
 }
 
 /**
+ * Tipping Test Helper utilities for Tipping contract testing
+ */
+export class TippingTestHelpers {
+  private accounts: Map<string, string>;
+
+  constructor(accounts: Map<string, string>) {
+    this.accounts = accounts;
+  }
+
+  /**
+   * Send a tip and return the tip ID
+   */
+  sendTip(recipient: string, amount: number, messageId: number, sender: string): number {
+    const lastTipId = this.getLastTipId();
+    const expectedId = lastTipId + 1;
+
+    const response = simnet.callPublicFn(
+      "tipping",
+      "send-tip",
+      [Cl.principal(recipient), Cl.uint(amount), Cl.uint(messageId)],
+      sender
+    );
+
+    if (!response.result.toString().includes(`(ok u${expectedId})`)) {
+      throw new Error(`Failed to send tip: ${response.result}`);
+    }
+
+    return expectedId;
+  }
+
+  /**
+   * Get the current last tip ID
+   */
+  getLastTipId(): number {
+    const response = simnet.callReadOnlyFn(
+      "tipping",
+      "get-last-tip-id",
+      [],
+      this.accounts.get("deployer")!
+    );
+
+    const match = response.result.toString().match(/u(\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  }
+
+  /**
+   * Get tip details by ID
+   */
+  getTip(tipId: number) {
+    return simnet.callReadOnlyFn(
+      "tipping",
+      "get-tip",
+      [Cl.uint(tipId)],
+      this.accounts.get("deployer")!
+    );
+  }
+
+  /**
+   * Get user tips received
+   */
+  getUserTipsReceived(user: string) {
+    return simnet.callReadOnlyFn(
+      "tipping",
+      "get-user-tips-received",
+      [Cl.principal(user)],
+      this.accounts.get("deployer")!
+    );
+  }
+
+  /**
+   * Get user tips sent
+   */
+  getUserTipsSent(user: string) {
+    return simnet.callReadOnlyFn(
+      "tipping",
+      "get-user-tips-sent",
+      [Cl.principal(user)],
+      this.accounts.get("deployer")!
+    );
+  }
+
+  /**
+   * Get STX balance for a user
+   */
+  getSTXBalance(user: string): number {
+    const balance = simnet.getAssetsMap().get("STX");
+    if (balance && balance.has(user)) {
+      return Number(balance.get(user));
+    }
+    return 0;
+  }
+
+  /**
+   * Verify tip structure and content
+   */
+  verifyTip(
+    tipId: number,
+    expectedSender: string,
+    expectedRecipient: string,
+    expectedAmount: number,
+    expectedMessageId: number,
+    expectedTimestamp?: number
+  ): boolean {
+    const tip = this.getTip(tipId);
+
+    if (tip.result.toString().includes("none")) {
+      return false;
+    }
+
+    const tipStr = tip.result.toString();
+
+    // Check sender
+    if (!tipStr.includes(expectedSender)) {
+      console.error(`Sender mismatch. Expected: ${expectedSender}`);
+      return false;
+    }
+
+    // Check recipient
+    if (!tipStr.includes(expectedRecipient)) {
+      console.error(`Recipient mismatch. Expected: ${expectedRecipient}`);
+      return false;
+    }
+
+    // Check amount
+    const amountMatch = tipStr.match(/amount: u(\d+)/);
+    const actualAmount = amountMatch ? parseInt(amountMatch[1]) : 0;
+    if (actualAmount !== expectedAmount) {
+      console.error(`Amount mismatch. Expected: ${expectedAmount}, Actual: ${actualAmount}`);
+      return false;
+    }
+
+    // Check message ID
+    const messageIdMatch = tipStr.match(/message-id: u(\d+)/);
+    const actualMessageId = messageIdMatch ? parseInt(messageIdMatch[1]) : 0;
+    if (actualMessageId !== expectedMessageId) {
+      console.error(`Message ID mismatch. Expected: ${expectedMessageId}, Actual: ${actualMessageId}`);
+      return false;
+    }
+
+    // Check timestamp if provided
+    if (expectedTimestamp !== undefined) {
+      const timestampMatch = tipStr.match(/timestamp: u(\d+)/);
+      const actualTimestamp = timestampMatch ? parseInt(timestampMatch[1]) : 0;
+      if (actualTimestamp !== expectedTimestamp) {
+        console.error(`Timestamp mismatch. Expected: ${expectedTimestamp}, Actual: ${actualTimestamp}`);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Verify user tip statistics
+   */
+  verifyUserTipStats(user: string, expectedReceived: number, expectedSent: number): boolean {
+    const received = this.getUserTipsReceived(user);
+    const sent = this.getUserTipsSent(user);
+
+    const receivedStr = received.result.toString();
+    const sentStr = sent.result.toString();
+
+    const receivedMatch = receivedStr.match(/total-amount: u(\d+)/);
+    const actualReceived = receivedMatch ? parseInt(receivedMatch[1]) : 0;
+
+    const sentMatch = sentStr.match(/total-amount: u(\d+)/);
+    const actualSent = sentMatch ? parseInt(sentMatch[1]) : 0;
+
+    if (actualReceived !== expectedReceived) {
+      console.error(`Tips received mismatch. Expected: ${expectedReceived}, Actual: ${actualReceived}`);
+      return false;
+    }
+
+    if (actualSent !== expectedSent) {
+      console.error(`Tips sent mismatch. Expected: ${expectedSent}, Actual: ${actualSent}`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Create test scenario with multiple tips
+   */
+  createTipScenario(tips: Array<{
+    sender: string,
+    recipient: string,
+    amount: number,
+    messageId: number
+  }>): number[] {
+    const tipIds: number[] = [];
+
+    tips.forEach(tip => {
+      try {
+        const tipId = this.sendTip(tip.recipient, tip.amount, tip.messageId, tip.sender);
+        tipIds.push(tipId);
+      } catch (error) {
+        console.error(`Failed to send tip: ${error}`);
+      }
+    });
+
+    return tipIds;
+  }
+}
+
+/**
  * Error code constants for better test readability
  */
 export const ERROR_CODES = {
   MESSAGE_NOT_FOUND: 1,
   ALREADY_LIKED: 2,
   UNKNOWN_ERROR: 3
+} as const;
+
+/**
+ * Tipping error code constants
+ */
+export const TIPPING_ERROR_CODES = {
+  INSUFFICIENT_BALANCE: 1,
+  INVALID_AMOUNT: 2,
+  SELF_TIP: 3,
+  INVALID_RECIPIENT: 4
 } as const;

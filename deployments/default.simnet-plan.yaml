@@ -65,8 +65,23 @@ plan:
             path: contracts/guestbook.clar
             clarity-version: 1
         - emulated-contract-publish:
+            contract-name: leaderboard
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/leaderboard.clar
+            clarity-version: 1
+        - emulated-contract-publish:
+            contract-name: message-moderation
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/message-moderation.clar
+            clarity-version: 1
+        - emulated-contract-publish:
             contract-name: tipping
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/tipping.clar
+            clarity-version: 1
+        - emulated-contract-publish:
+            contract-name: user-badges
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/user-badges.clar
             clarity-version: 1
       epoch: "2.1"

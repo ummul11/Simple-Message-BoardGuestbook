@@ -11,6 +11,15 @@ path = "contracts/guestbook.clar"
 [contracts.tipping]
 path = "contracts/tipping.clar"
 
+[contracts.message-moderation]
+path = "contracts/message-moderation.clar"
+
+[contracts.user-badges]
+path = "contracts/user-badges.clar"
+
+[contracts.leaderboard]
+path = "contracts/leaderboard.clar"
+
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
